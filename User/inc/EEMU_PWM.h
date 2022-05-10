@@ -1,13 +1,9 @@
 #ifndef _EEMU_PWM_H_
 #define _EEMU_PWM_H_
 
-
 #define TIM1_PERIOD 1e-6f
-/*¶¨ÒåËÀÇøÊ±¼ä£¬Ö±½Ó×ª¾ØÓëÖ±½Ó·½Ê½µÄÊ±ÖÓ¶¨±êÒªÒ»ÖÂ²ÅÐÐ*/
-#define DBCNT_INIT_STATE 600 // 8us
 
-
-/********************SPWMµ÷ÖÆ*********************/
+/********************SPWMï¿½ï¿½ï¿½ï¿½*********************/
 typedef struct
 {
     float m_ref;     // Input: reference modulation factor
@@ -15,24 +11,24 @@ typedef struct
     float Ua;
     float Ub;
     float Uc;
-    float Fc;            //ÔØ²¨ÆµÂÊ
-    float Tc;            //ÔØ²¨ÖÜÆÚ
-    float deltak;        //µçÑ¹²¨¶¯ÏµÊý£¬±äÁ¿
-    float DELTAKCONST;   //µçÑ¹ÔÊÐí²¨¶¯ÏµÊý£¬³£Á¿²ÎÊý
-    float vdc;           //Ö±Á÷Ä¸ÏßµçÑ¹V
-    float vdc1;          //ÖÐµãµçÑ¹V
-    float ia;            // aÏàÊä³öµçÁ÷ÖµA
-    float ib;            // bÏàÊä³öµçÁ÷ÖµA
-    float ic;            // cÏàÊä³öµçÁ÷ÖµA
-    float C_CONST;       //µçÈÝÖµ£¬³£Á¿²ÎÊýUF
-    float f_k;           //Æ½ºâÒò×Ó
-    float f_k_p;         //Æ½ºâÒò×Ó±ÈÀý¿ØÖÆÏµÊý£¬²ÎÊýÉèÖÃ£¬1/10000
-    float I_ZERO_CONST;  //µ±µçÁ÷±È½ÏÐ¡µÄÊ±ºòÈÏÎªÆäÎª0£¬²ÎÊý1/1000
-    float T_MIN_DELTA_K; //¶ÔÊä³öµÄ×îÐ¡Âö¿í½øÐÐ±ØÒªµÄÏÞÖÆ£¬²ÎÊý1/32768:×îÐ¡Âö¿íÕ¼Õû¸öÖÜÆÚµÄ±ÈÀý
-    float tbconst;       //¹Ì¶¨µÄËÀÇøÊ±¼ä²ÎÊý
-    float tba;           // aÏàËÀÇø²¹³¥Ê±¼ä£¬²ÎÊýÉèÖÃ²ÎÊý1/32768
-    float tbb;           // bÏàËÀÇø²¹³¥Ê±¼ä£¬²ÎÊýÉèÖÃ²ÎÊý1/32768
-    float tbc;           // cÏàËÀÇø²¹³¥Ê±¼ä£¬²ÎÊýÉèÖÃ²ÎÊý1/32768
+    float Fc;            //è½½æ³¢é¢‘çŽ‡ï¼Œå‚æ•°
+    u16 Ts;              //è½½æ³¢å‘¨æœŸ,ç›´æŽ¥å¯¹åº”çš„æ˜¯å‘¨æœŸå¯„å­˜å™¨ä¸­çš„å€¼ï¼Œå‚æ•°
+    float deltak;        //ç”µåŽ‹æ³¢åŠ¨ç³»æ•°ï¼Œå˜é‡
+    float DELTAKCONST;   //ç”µåŽ‹å…è®¸æ³¢åŠ¨ç³»æ•°ï¼Œå¸¸é‡å‚æ•°
+    float vdc;           //ç›´æµæ¯çº¿ç”µåŽ‹V
+    float vdc1;          //ä¸­ç‚¹ç”µåŽ‹V
+    float ia;            // aç›¸è¾“å‡ºç”µæµå€¼A
+    float ib;            // bç›¸è¾“å‡ºç”µæµå€¼A
+    float ic;            // cç›¸è¾“å‡ºç”µæµå€¼A
+    float C_CONST;       //ç”µå®¹å€¼ï¼Œå¸¸é‡å‚æ•°UF
+    float f_k;           //å¹³è¡¡å› å­
+    float f_k_p;         //å¹³è¡¡å› å­æ¯”ä¾‹æŽ§åˆ¶ç³»æ•°ï¼Œå‚æ•°è®¾ç½®ï¼Œ1/10000
+    float I_ZERO_CONST;  //å½“ç”µæµæ¯”è¾ƒå°çš„æ—¶å€™è®¤ä¸ºå…¶ä¸º0ï¼Œå‚æ•°1/1000
+    float T_MIN_DELTA_K; //å¯¹è¾“å‡ºçš„æœ€å°è„‰å®½è¿›è¡Œå¿…è¦çš„é™åˆ¶ï¼Œå‚æ•°1/32768:æœ€å°è„‰å®½å æ•´ä¸ªå‘¨æœŸçš„æ¯”ä¾‹
+    float tbconst;       //å›ºå®šçš„æ­»åŒºæ—¶é—´å‚æ•°
+    float tba;           // aç›¸æ­»åŒºè¡¥å¿æ—¶é—´ï¼Œå‚æ•°è®¾ç½®å‚æ•°1/32768
+    float tbb;           // bç›¸æ­»åŒºè¡¥å¿æ—¶é—´ï¼Œå‚æ•°è®¾ç½®å‚æ•°1/32768
+    float tbc;           // cç›¸æ­»åŒºè¡¥å¿æ—¶é—´ï¼Œå‚æ•°è®¾ç½®å‚æ•°1/32768
     float Ta;            // Output: reference phase-a switching function
     float Tb;            // Output: reference phase-b switching function
     float Tc;            // Output: reference phase-c switching function
@@ -42,28 +38,9 @@ typedef struct
 
 typedef SV_MODULE *SV_MODULE_handle;
 
-
-inline void calc_SV_Ua(SV_MODULE_handle v)
-{
-    v->Ua = 0.5f * v->m_ref * (sinf(v->angle_ref) + sinf(3 * v->angle_ref) * 0.16666667f);
-}
-
-
-inline void calc_SV_Ub(SV_MODULE_handle v)
-{
-    v->Ub = 0.5f * v->m_ref * (sinf(v->angle_ref - 2.0943952f) + sinf(3 * v->angle_ref) * 0.16666667f);
-}
-
-
-inline void calc_SV_Uc(SV_MODULE_handle v)
-{
-    v->Uc = 0.5f * v->m_ref * (sinf(v->angle_ref + 2.0943952f) + sinf(3 * v->angle_ref) * 0.16666667f);
-}
-
-
 void svpwm_init(u16 sw_fre, u16 dead_time);
 void sv_module_calc(SV_MODULE_handle v, TIM_TypeDef *TIMx);
 void sv_module_init(SV_MODULE_handle v, u16 sw_fre);
+void calc_SV_Uabc(SV_MODULE_handle v);
 
 #endif
-

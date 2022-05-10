@@ -12,32 +12,29 @@
 #define FIVEPIDIV6 2.617994
 #define ELEVPIDIV6 5.7595865
 
-
 u16 flag_outa_0 = 0, flag_into_0 = 0;
 u16 flag_outa_1 = 0, flag_into_1 = 0;
-u16 flag_outa_2 = 0, flag_into_2 = 0; //±È½Ï¼Ä´æÆ÷±êÖ¾Î»
-u16 flag_outa_3 = 0, flag_into_3 = 0; //±È½Ï¼Ä´æÆ÷±êÖ¾Î»
+u16 flag_outa_2 = 0, flag_into_2 = 0; //æ¯”è¾ƒå¯„å­˜å™¨æ ‡å¿—ä½
+u16 flag_outa_3 = 0, flag_into_3 = 0; //æ¯”è¾ƒå¯„å­˜å™¨æ ‡å¿—ä½
 
 u16 CMPA_TEMP1, CMPA_TEMP2, CMPA_TEMP3, CMPA_TEMP4;
 
-
 void svpwm_init(u16 sw_fre, u16 dead_time);
 void sv_module_calc(SV_MODULE_handle v, TIM_TypeDef *TIMx);
-void sv_module_init(SV_MODULE_handle v);
+void sv_module_init(SV_MODULE_handle v, u16 sw_fre);
 void update_compare(TIM_TypeDef *TIMx);
-
+void calc_SV_Uabc(SV_MODULE_handle v);
 
 /*********************************************************************
  * @fn      SVPWM_Init
  *
- * @brief   SVPWM_module_Init based on Tim1. ¶¨Ê±Æ÷Ê±ÖÓÆµÂÊÎª1e6Hz.
-  *          ³õÊ¼»¯TIM1µÄ4Â·PWM
-  *          µÚ4Â·Ö»ÓÐ1¸öÐÅºÅ£¬ÆäËûÈýÂ·¸÷ÓÐ1¶Ô¡£
-  *          todo   ¹Ø±ÕËÀÇø£¬½ûÖ¹CH2~4ÖÐ¶Ï
+ * @brief   SVPWM_module_Init based on Tim1. å®šæ—¶å™¨æ—¶é’Ÿé¢‘çŽ‡ä¸º1e6Hz.
+ *          åˆå§‹åŒ–TIM1çš„4è·¯PWM
+ *          ç¬¬4è·¯åªæœ‰1ä¸ªä¿¡å·ï¼Œå…¶ä»–ä¸‰è·¯å„æœ‰1å¯¹ã€‚
  *
- * @param   sw_fre - sw_fre = ¶¨Ê±Æ÷Ê±ÖÓÆµÂÊ / ¿ª¹ØÆµÂÊ
- *          dead_time - dead_time = Êµ¼ÊËÀÇøÊ±¼ä * 144e6 / k - m,
- *          k = 16, Êµ¼ÊÊ±ÇøÊ±¼ä¿ÉÑ¡4~7us£¬ÆäËûkÖµÐèÒªÐÞ¸Äº¯ÊýµÚ120ÐÐ¡£
+ * @param   sw_fre - sw_fre = å®šæ—¶å™¨æ—¶é’Ÿé¢‘çŽ‡ / å¼€å…³é¢‘çŽ‡
+ *          dead_time - dead_time = å®žé™…æ­»åŒºæ—¶é—´ * 144e6 / k - m,
+ *          k = 16, å®žé™…æ—¶åŒºæ—¶é—´å¯é€‰4~7usï¼Œå…¶ä»–kå€¼éœ€è¦ä¿®æ”¹å‡½æ•°ç¬¬120è¡Œã€‚
  * @return  none
  */
 void svpwm_init(u16 sw_fre, u16 dead_time)
@@ -45,9 +42,10 @@ void svpwm_init(u16 sw_fre, u16 dead_time)
     u16 psc = 144 - 1;
     if (TIM1_PERIOD == 1e-6)
     {
-        psc = 144 - 1; // ¼ÆÊýÆ÷Ê±ÖÓ·ÖÆµ£¬Ê¹¼ÆÊýÆ÷Ê±ÖÓÎª1us
+        psc = 144 - 1; // è®¡æ•°å™¨æ—¶é’Ÿåˆ†é¢‘ï¼Œä½¿è®¡æ•°å™¨æ—¶é’Ÿä¸º1us
     }
-    u16 ccp = sw_fre >> 1;  // ³õÊ¼Õ¼¿Õ±ÈÉèÎª50%
+    u16 arr = sw_fre >> 1; // ä¸­å¤®å¯¹é½æ—¶å¼€å…³é¢‘çŽ‡æ˜¯å®šæ—¶å™¨é¢‘çŽ‡çš„2å€
+    u16 ccp = sw_fre >> 2; // åˆå§‹å ç©ºæ¯”è®¾ä¸º50%
     // 0xE0 => k = 16, m = 32; 0xC0 => k = 8, m = 32;
     // 0x80 => k = 2, m = 64; 0x00 => k = 1, m = 0;
     u16 k_mask = 0xE0;
@@ -101,16 +99,16 @@ void svpwm_init(u16 sw_fre, u16 dead_time)
     GPIO_InitStructure.GPIO_Speed = GPIO_Speed_50MHz;
     GPIO_Init(GPIOA, &GPIO_InitStructure);
 
-    TIM_TimeBaseInitStructure.TIM_Period = sw_fre;
+    TIM_TimeBaseInitStructure.TIM_Period = arr;
     TIM_TimeBaseInitStructure.TIM_Prescaler = psc;
     TIM_TimeBaseInitStructure.TIM_ClockDivision = TIM_CKD_DIV1;
-    // ¼ÆÊýÆ÷½»ÌæµØÏòÉÏºÍÏòÏÂ¼ÆÊý, ±È½ÏÖÐ¶Ï±êÖ¾Î»ÔÚ¼ÆÊýÆ÷ÏòÏÂ¼ÆÊýÊ±±»ÉèÖÃ
+    // è®¡æ•°å™¨äº¤æ›¿åœ°å‘ä¸Šå’Œå‘ä¸‹è®¡æ•°, æ¯”è¾ƒä¸­æ–­æ ‡å¿—ä½åœ¨è®¡æ•°å™¨å‘ä¸‹è®¡æ•°æ—¶è¢«è®¾ç½®
     TIM_TimeBaseInitStructure.TIM_CounterMode = TIM_CounterMode_CenterAligned1;
     TIM_TimeBaseInit(TIM1, &TIM_TimeBaseInitStructure);
 
     // TIM_OCMode_PWM1
-    // ÏòÉÏ¼ÆÊýÊ±¼ÆÊýÆ÷´óÓÚ±È½Ï²¶»ñ¼Ä´æÆ÷µÄÖµÊ±£¬Í¨µÀ x ÎªÓÐÐ§µçÆ½
-    // ÏòÏÂ¼ÆÊýÊ±¼ÆÊýÆ÷´óÓÚ±È½Ï²¶»ñ¼Ä´æÆ÷µÄÖµÊ±£¬Í¨µÀ X ÎªÎÞÐ§µçÆ½
+    // å‘ä¸Šè®¡æ•°æ—¶è®¡æ•°å™¨å¤§äºŽæ¯”è¾ƒæ•èŽ·å¯„å­˜å™¨çš„å€¼æ—¶ï¼Œé€šé“ x ä¸ºæœ‰æ•ˆç”µå¹³
+    // å‘ä¸‹è®¡æ•°æ—¶è®¡æ•°å™¨å¤§äºŽæ¯”è¾ƒæ•èŽ·å¯„å­˜å™¨çš„å€¼æ—¶ï¼Œé€šé“ X ä¸ºæ— æ•ˆç”µå¹³
     TIM_OCInitStructure.TIM_OCMode = TIM_OCMode_PWM1;
     TIM_OCInitStructure.TIM_OutputState = TIM_OutputState_Enable;
     TIM_OCInitStructure.TIM_OutputNState = TIM_OutputNState_Enable;
@@ -151,167 +149,161 @@ void svpwm_init(u16 sw_fre, u16 dead_time)
     TIM_OCInitStructure.TIM_OCIdleState = TIM_OCIdleState_Reset;
     TIM_OC4Init(TIM1, &TIM_OCInitStructure);
 
-//    TIM_BDTRInitStructure.TIM_OSSIState = TIM_OSSIState_Disable;
-//    TIM_BDTRInitStructure.TIM_OSSRState = TIM_OSSRState_Disable;
-//    TIM_BDTRInitStructure.TIM_LOCKLevel = TIM_LOCKLevel_OFF;
-//
-//    u16 dt = k_mask & dead_time;
-//    TIM_BDTRInitStructure.TIM_DeadTime = dt;
-//    TIM_BDTRInitStructure.TIM_Break = TIM_Break_Disable;
-//    TIM_BDTRInitStructure.TIM_BreakPolarity = TIM_BreakPolarity_High;
-//    TIM_BDTRInitStructure.TIM_AutomaticOutput = TIM_AutomaticOutput_Enable;
-//    TIM_BDTRConfig(TIM1, &TIM_BDTRInitStructure);
+    TIM_BDTRInitStructure.TIM_OSSIState = TIM_OSSIState_Disable;
+    TIM_BDTRInitStructure.TIM_OSSRState = TIM_OSSRState_Disable;
+    TIM_BDTRInitStructure.TIM_LOCKLevel = TIM_LOCKLevel_OFF;
 
-    // BDTR ÔÊÐí OCx ºÍ OCxN ÉèÎªÊä³ö
+    u16 dt = k_mask & dead_time;
+    TIM_BDTRInitStructure.TIM_DeadTime = dt;
+    TIM_BDTRInitStructure.TIM_Break = TIM_Break_Disable;
+    TIM_BDTRInitStructure.TIM_BreakPolarity = TIM_BreakPolarity_High;
+    TIM_BDTRInitStructure.TIM_AutomaticOutput = TIM_AutomaticOutput_Enable;
+    TIM_BDTRConfig(TIM1, &TIM_BDTRInitStructure);
+
+    // BDTR å…è®¸ OCx å’Œ OCxN è®¾ä¸ºè¾“å‡º
     TIM_CtrlPWMOutputs(TIM1, ENABLE);
 
-    // ¿ªÆô±È½Ï²¶»ñ¼Ä´æÆ÷µÄÔ¤×°ÔØ¹¦ÄÜ
+    // å¼€å¯æ¯”è¾ƒæ•èŽ·å¯„å­˜å™¨çš„é¢„è£…è½½åŠŸèƒ½
     TIM_OC1PreloadConfig(TIM1, TIM_OCPreload_Enable);
     TIM_OC2PreloadConfig(TIM1, TIM_OCPreload_Enable);
     TIM_OC3PreloadConfig(TIM1, TIM_OCPreload_Enable);
     TIM_OC4PreloadConfig(TIM1, TIM_OCPreload_Enable);
 
-    // ÖÃARPEÎ»Ê¹ÄÜ£¬Ê¹ÄÜ×Ô¶¯ÖØ×°Öµ¼Ä´æÆ÷£¨ATRLR£©£¬´ËÓòµÄÖµ½«»á±»×°Èë¼ÆÊýÆ÷
+    // ç½®ARPEä½ä½¿èƒ½ï¼Œä½¿èƒ½è‡ªåŠ¨é‡è£…å€¼å¯„å­˜å™¨ï¼ˆATRLRï¼‰ï¼Œæ­¤åŸŸçš„å€¼å°†ä¼šè¢«è£…å…¥è®¡æ•°å™¨
     TIM_ARRPreloadConfig(TIM1, ENABLE);
-
-    // Ê¹ÄÜCH1~CH4ÖÐ¶Ï
-    TIM_ITConfig(TIM1, TIM_IT_CC1, ENABLE);
-//    TIM_ITConfig(TIM1, TIM_IT_CC2, ENABLE);
-//    TIM_ITConfig(TIM1, TIM_IT_CC3, ENABLE);
-//    TIM_ITConfig(TIM1, TIM_IT_CC4, ENABLE);
-
-    // ¿ªÊ¼¼ÆÊýÖ®Ç°,ÖÃ UGÎ»À´³õÊ¼»¯ËùÓÐ¼Ä´æÆ÷
+    // æ›´æ–°äº‹ä»¶åªå…è®¸æ¥è‡ªè®¡æ•°å™¨ä¸Šæº¢æˆ–ä¸‹æº¢
+    TIM1->CTLR1 |= TIM_URS;
+    // å¼€å§‹è®¡æ•°ä¹‹å‰,ç½®UGä½è£…è½½æ¯”è¾ƒå¯„å­˜å™¨
     TIM1->SWEVGR |= TIM_UG;
-
+    // ä½¿èƒ½æ›´æ–°äº‹ä»¶ä¸­æ–­
+    TIM_ITConfig(TIM1, TIM_IT_Update, ENABLE);
     TIM_Cmd(TIM1, ENABLE);
 }
 
-
 void sv_module_calc(SV_MODULE_handle v, TIM_TypeDef *TIMx)
 {
-	float Tas, Tbs, Tcs, Tmax, Tmin, Tmid, Teff, Teff1;
-	float Toffset, Tga, Tgb, Tgc;
-	float t_min_k1;
+    float Tas, Tbs, Tcs, Tmax, Tmin, Tmid, Teff, Teff1;
+    float Toffset, Tga, Tgb, Tgc;
+    float t_min_k1;
 
-	t_min_k1 = 1 - v->T_MIN_DELTA_K;
-	/*******************************/
-	Tas = v->Ua;
-	Tbs = v->Ub;
-	Tcs = v->Uc;
-	// ¶Ô¼ÆËãµÄÊ±¼äÖµ½øÐÐÅÅÐò´¦Àí
-	if (Tas > Tbs)
-	{
-		Tmax = Tas;
-		Tmin = Tbs;
-	}
-	else
-	{
-		Tmax = Tbs;
-		Tmin = Tas;
-	}
-	if (Tmax > Tcs)
-	{
-		if (Tmin > Tcs)
-		{
-			Tmid = Tmin;
-			Tmin = Tcs;
-		}
-		else
-			Tmid = Tcs;
-	}
-	else
-	{
-		Tmid = Tmax;
-		Tmax = Tcs;
-	}
-	// over
-	Teff = Tmax - Tmin;
-	if (Teff > 1.0f)
-	{
-		Teff1 = 1.0f / Teff;
-		Tas = Tas * Teff1;
-		Tbs = Tbs * Teff1;
-		Tcs = Tcs * Teff1;
+    t_min_k1 = 1 - v->T_MIN_DELTA_K;
+    /*******************************/
+    Tas = v->Ua;
+    Tbs = v->Ub;
+    Tcs = v->Uc;
+    // å¯¹è®¡ç®—çš„æ—¶é—´å€¼è¿›è¡ŒæŽ’åºå¤„ç†
+    if (Tas > Tbs)
+    {
+        Tmax = Tas;
+        Tmin = Tbs;
+    }
+    else
+    {
+        Tmax = Tbs;
+        Tmin = Tas;
+    }
+    if (Tmax > Tcs)
+    {
+        if (Tmin > Tcs)
+        {
+            Tmid = Tmin;
+            Tmin = Tcs;
+        }
+        else
+            Tmid = Tcs;
+    }
+    else
+    {
+        Tmid = Tmax;
+        Tmax = Tcs;
+    }
+    // over
+    Teff = Tmax - Tmin;
+    if (Teff > 1.0f)
+    {
+        Teff1 = 1.0f / Teff;
+        Tas = Tas * Teff1;
+        Tbs = Tbs * Teff1;
+        Tcs = Tcs * Teff1;
 
-		Tmax = Tmax * Teff1;
-		Tmin = Tmin * Teff1;
-		Tmid = Tmid * Teff1;
-	}
-	//
-	Toffset = 0.5f * (1.0f - Tmax - Tmin);
-	Tga = Tas + Toffset;
-	Tgb = Tbs + Toffset;
-	Tgc = Tcs + Toffset;
-
-	Tmax += Toffset;
-	Tmin += Toffset;
-	Tmid += Toffset;
-	//µÃµ½¿ª¹Ø¹Ü×÷ÓÃÊ±¼ä
-	v->Ta = Tga;
-	v->Tb = Tgb;
-	v->Tc = Tgc;
-	/****/
-	//¿¼ÂÇËÀÇø²¹³¥, ³õ²½ÈÏ¶¨¶þ¼«¹ÜÒÔ¼°¹Ü×ÓµÄµ¼Í¨Ñ¹½µºÜÐ¡ºöÂÔ²»¼Æ
-    //if(v->ia<0)  v->tba=-v->tbconst;
-    //else if(v->ia>0) v->tba=v->tbconst;
+        Tmax = Tmax * Teff1;
+        Tmin = Tmin * Teff1;
+        Tmid = Tmid * Teff1;
+    }
     //
-    //if(v->ib<0)  v->tbb=-v->tbconst;
-    //else if(v->ib>0) v->tbb=v->tbconst;
+    Toffset = 0.5f * (1.0f - Tmax - Tmin);
+    Tga = Tas + Toffset;
+    Tgb = Tbs + Toffset;
+    Tgc = Tcs + Toffset;
+
+    Tmax += Toffset;
+    Tmin += Toffset;
+    Tmid += Toffset;
+    //å¾—åˆ°å¼€å…³ç®¡ä½œç”¨æ—¶é—´
+    v->Ta = Tga;
+    v->Tb = Tgb;
+    v->Tc = Tgc;
+    /****/
+    //è€ƒè™‘æ­»åŒºè¡¥å¿, åˆæ­¥è®¤å®šäºŒæžç®¡ä»¥åŠç®¡å­çš„å¯¼é€šåŽ‹é™å¾ˆå°å¿½ç•¥ä¸è®¡
+    // if(v->ia<0)  v->tba=-v->tbconst;
+    // else if(v->ia>0) v->tba=v->tbconst;
     //
-    //if(v->ic<0)  v->tbc=-v->tbconst;
-    //else if(v->ic>0) v->tbc=v->tbconst;
-	if ((v->angle_ref <= THREEPIDIV2) && (v->angle_ref > PIDIV2))
-		v->tba = -v->tbconst;
-	else
-		v->tba = v->tbconst;
+    // if(v->ib<0)  v->tbb=-v->tbconst;
+    // else if(v->ib>0) v->tbb=v->tbconst;
+    //
+    // if(v->ic<0)  v->tbc=-v->tbconst;
+    // else if(v->ic>0) v->tbc=v->tbconst;
+    if ((v->angle_ref <= THREEPIDIV2) && (v->angle_ref > PIDIV2))
+        v->tba = -v->tbconst;
+    else
+        v->tba = v->tbconst;
 
-	if ((v->angle_ref <= SEVENPIDIV6) && (v->angle_ref > PIDIV6))
-		v->tbb = v->tbconst;
-	else
-		v->tbb = -v->tbconst;
+    if ((v->angle_ref <= SEVENPIDIV6) && (v->angle_ref > PIDIV6))
+        v->tbb = v->tbconst;
+    else
+        v->tbb = -v->tbconst;
 
-	if ((v->angle_ref <= ELEVPIDIV6) && (v->angle_ref > FIVEPIDIV6))
-		v->tbc = v->tbconst;
-	else
-		v->tbc = -v->tbconst;
+    if ((v->angle_ref <= ELEVPIDIV6) && (v->angle_ref > FIVEPIDIV6))
+        v->tbc = v->tbconst;
+    else
+        v->tbc = -v->tbconst;
 
-	TIM_SetCompare4(TIMx, v->Tc);
+    TIM_SetCompare4(TIMx, v->Ts);
 
-	v->Ta += v->tba;
-	v->Tb += v->tbb;
-	v->Tc += v->tbc;
-	//¶ÔÂö³å¿í¶È½øÐÐÏÞÖÆ,ÎþÉü×î´óµÄµ÷ÖÆÏµÊý
-	if (v->Ta < v->T_MIN_DELTA_K)
-		v->Ta = v->T_MIN_DELTA_K;
-	if (v->Ta > t_min_k1)
-		v->Ta = t_min_k1;
+    v->Ta += v->tba;
+    v->Tb += v->tbb;
+    v->Tc += v->tbc;
+    //å¯¹è„‰å†²å®½åº¦è¿›è¡Œé™åˆ¶,ç‰ºç‰²æœ€å¤§çš„è°ƒåˆ¶ç³»æ•°
+    if (v->Ta < v->T_MIN_DELTA_K)
+        v->Ta = v->T_MIN_DELTA_K;
+    if (v->Ta > t_min_k1)
+        v->Ta = t_min_k1;
 
-	if (v->Tb < v->T_MIN_DELTA_K)
-		v->Tb = v->T_MIN_DELTA_K;
-	if (v->Tb > t_min_k1)
-		v->Tb = t_min_k1;
+    if (v->Tb < v->T_MIN_DELTA_K)
+        v->Tb = v->T_MIN_DELTA_K;
+    if (v->Tb > t_min_k1)
+        v->Tb = t_min_k1;
 
-	if (v->Tc < v->T_MIN_DELTA_K)
-		v->Tc = v->T_MIN_DELTA_K;
-	if (v->Tc > t_min_k1)
-		v->Tc = t_min_k1;
+    if (v->Tc < v->T_MIN_DELTA_K)
+        v->Tc = v->T_MIN_DELTA_K;
+    if (v->Tc > t_min_k1)
+        v->Tc = t_min_k1;
 
-	//¼ÆËã¸÷±È½Ï¼Ä´æÆ÷µÄÊä³öÖµ
-	u16 compare1 = (1 - v->Ta) * (v->Tc);
-	u16 compare2 = (1 - v->Tb) * (v->Tc);
-	u16 compare3 = (1 - v->Tc) * (v->Tc);
-	// u16 compare1 = FocCtrll.Syn_Deta;
-	// u16 compare2 = FocCtrll.Flux_P;
-	// u16 compare3 = FocCtrll.Flux_U;
-	TIM_SetCompare1(TIMx, compare1);
-	TIM_SetCompare2(TIMx, compare2);
-	TIM_SetCompare3(TIMx, compare3);
+    //è®¡ç®—å„æ¯”è¾ƒå¯„å­˜å™¨çš„è¾“å‡ºå€¼
+    u16 compare1 = (1 - v->Ta) * (v->Ts);
+    u16 compare2 = (1 - v->Tb) * (v->Ts);
+    u16 compare3 = (1 - v->Tc) * (v->Ts);
+    // u16 compare1 = FocCtrll.Syn_Deta;
+    // u16 compare2 = FocCtrll.Flux_P;
+    // u16 compare3 = FocCtrll.Flux_U;
+    TIM_SetCompare1(TIMx, compare1);
+    TIM_SetCompare2(TIMx, compare2);
+    TIM_SetCompare3(TIMx, compare3);
 
-	/**************/
-	update_compare(TIMx);
-	/*end*/
+    /**************/
+    update_compare(TIMx);
+    /*end*/
 }
-
 
 void update_compare(TIM_TypeDef *TIMx)
 {
@@ -320,12 +312,12 @@ void update_compare(TIM_TypeDef *TIMx)
     {
         flag_outa_0 = 0;
         flag_into_0 = 0;
-        // ±È½Ï¼Ä´æÆ÷×°ÔØ·½Ê½ÉèÖÃÎª=0Ê±×°ÔØ£¬Ê¹ÄÜÔ¤×°ÔØ
+        // æ¯”è¾ƒå¯„å­˜å™¨è£…è½½æ–¹å¼è®¾ç½®ä¸º=0æ—¶è£…è½½ï¼Œä½¿èƒ½é¢„è£…è½½
         // EPwm1Regs.CMPCTL.all = CMPCTL_INIT_STATE;
         TIM_OC1PreloadConfig(TIM1, TIM_OCPreload_Enable);
 
-        // ÏòÉÏ¼ÆÊý£¬ÇÒÊ±»ù¼ÆÊýÆ÷µÈÓÚCMPAÊ±pwmÊä³ö¸ß
-        // ÏòÏÂ¼ÆÊý£¬ÇÒÊ±»ù¼ÆÊýÆ÷µÈÓÚCMPAÊ±pwmÊä³öµÍ
+        // å‘ä¸Šè®¡æ•°ï¼Œä¸”æ—¶åŸºè®¡æ•°å™¨ç­‰äºŽCMPAæ—¶pwmè¾“å‡ºé«˜
+        // å‘ä¸‹è®¡æ•°ï¼Œä¸”æ—¶åŸºè®¡æ•°å™¨ç­‰äºŽCMPAæ—¶pwmè¾“å‡ºä½Ž
         // EPwm1Regs.AQCTLA.all = AQCTLA_INIT_STATE;
         u16 tmpccmrx = TIMx->CHCTLR1;
         tmpccmrx |= TIM_OCMode_PWM1;
@@ -333,13 +325,13 @@ void update_compare(TIM_TypeDef *TIMx)
     }
     if ((CMPA_TEMP1 == 0) && (TIMx->CH1CVR != 0))
     {
-        // µ±Ç°½øÖÐ¶Ïºó£¬Êä³ö¸ßµçÆ½£¬±È½Ï²»¶¯×÷£¬ÔÚÖÜÆÚÖµÊ±¸³Öµ±È½Ï¼Ä´æÆ÷µÄÖµ
-        //// ZRO = 1: Ê±»ù¼ÆÊýÆ÷µÈÓÚ0Ê±Ê¹epwmaÊä³öµÍ
+        // å½“å‰è¿›ä¸­æ–­åŽï¼Œè¾“å‡ºé«˜ç”µå¹³ï¼Œæ¯”è¾ƒä¸åŠ¨ä½œï¼Œåœ¨å‘¨æœŸå€¼æ—¶èµ‹å€¼æ¯”è¾ƒå¯„å­˜å™¨çš„å€¼
+        // ZRO = 1: æ—¶åŸºè®¡æ•°å™¨ç­‰äºŽ0æ—¶ä½¿epwmaè¾“å‡ºä½Ž
         // EPwm1Regs.AQCTLA.bit.ZRO = 1;
-        //// CAD = 0: ÏòÏÂ¼ÆÊýÊ±£¬Ê±»ù¼ÆÊýÆ÷µÈÓÚCMPAÊ±²»¶¯×÷
-        // EPwm1Regs.AQCTLA.bit.CAD = 0; //ÏÂ´Î½øÖÐ¶ÏÊ±ÓÖ»Ö¸´Õý³££¬ÓÉÓÚCAU±£³Ö²»±äËùÒÔ²»Ó°Ïì
+        // CAD = 0: å‘ä¸‹è®¡æ•°æ—¶ï¼Œæ—¶åŸºè®¡æ•°å™¨ç­‰äºŽCMPAæ—¶ä¸åŠ¨ä½œ
+        // EPwm1Regs.AQCTLA.bit.CAD = 0; //ä¸‹æ¬¡è¿›ä¸­æ–­æ—¶åˆæ¢å¤æ­£å¸¸ï¼Œç”±äºŽCAUä¿æŒä¸å˜æ‰€ä»¥ä¸å½±å“
         u16 tmpccmrx = TIMx->CHCTLR1;
-        tmpccmrx |= TIM_OCMode_Timing; // ±È½Ï²¶»ñ¼Ä´æÆ÷µÄÖµÓëºËÐÄ¼ÆÊýÆ÷¼äµÄ±È½ÏÖµ¶Ô OC1REF²»Æð×÷ÓÃ
+        tmpccmrx |= TIM_OCMode_Timing; // æ¯”è¾ƒæ•èŽ·å¯„å­˜å™¨çš„å€¼ä¸Žæ ¸å¿ƒè®¡æ•°å™¨é—´çš„æ¯”è¾ƒå€¼å¯¹ OC1REFä¸èµ·ä½œç”¨
         TIMx->CHCTLR1 = tmpccmrx;
 
         // EPwm1Regs.CMPCTL.bit.LOADAMODE = 2;
@@ -348,7 +340,7 @@ void update_compare(TIM_TypeDef *TIMx)
     }
     if ((CMPA_TEMP1 != 0) && (TIMx->CH1CVR == 0))
     {
-        //// ZRO = 2: Ê±»ù¼ÆÊýÆ÷µÈÓÚ0Ê±Ê¹epwmaÊä³ö¸ß
+        // ZRO = 2: æ—¶åŸºè®¡æ•°å™¨ç­‰äºŽ0æ—¶ä½¿epwmaè¾“å‡ºé«˜
         // EPwm1Regs.AQCTLA.bit.ZRO = 2;
         u16 tmpccmrx = TIMx->CHCTLR1;
         tmpccmrx |= TIM_OCMode_PWM1;
@@ -394,7 +386,7 @@ void update_compare(TIM_TypeDef *TIMx)
         flag_outa_1 = 0;
         flag_into_1 = 0;
 
-        TIM_OC3PreloadConfig(TIM1, TIM_OCPreload_Enable);
+        TIM_OC2PreloadConfig(TIM1, TIM_OCPreload_Enable);
         u16 tmpccmrx = TIMx->CHCTLR1;
         tmpccmrx |= TIM_OCMode_PWM1 << 8;
         TIMx->CHCTLR1 = tmpccmrx;
@@ -423,7 +415,7 @@ void update_compare(TIM_TypeDef *TIMx)
         flag_outa_3 = 0;
         flag_into_3 = 0;
 
-        TIM_OC3PreloadConfig(TIM1, TIM_OCPreload_Enable);
+        TIM_OC4PreloadConfig(TIM1, TIM_OCPreload_Enable);
         u16 tmpccmrx = TIMx->CHCTLR2;
         tmpccmrx |= TIM_OCMode_PWM1 << 8;
         TIMx->CHCTLR2 = tmpccmrx;
@@ -445,7 +437,6 @@ void update_compare(TIM_TypeDef *TIMx)
     CMPA_TEMP4 = TIMx->CH4CVR;
 }
 
-
 void sv_module_init(SV_MODULE_handle v, u16 sw_fre)
 {
     v->m_ref = 0;
@@ -454,7 +445,7 @@ void sv_module_init(SV_MODULE_handle v, u16 sw_fre)
     v->Ub = 0;
     v->Uc = 0;
     v->Fc = 1e6 / sw_fre;
-    v->Tc = sw_fre * 1e-6;
+    v->Ts = (sw_fre >> 1);
     v->deltak = 0;
     v->DELTAKCONST = 0;
     v->vdc = 0;
@@ -477,8 +468,13 @@ void sv_module_init(SV_MODULE_handle v, u16 sw_fre)
     v->calc = sv_module_calc;
 }
 
+void calc_SV_Uabc(SV_MODULE_handle v)
+{
+    v->Ua = 0.5f * v->m_ref * (sinf(v->angle_ref) + sinf(3 * v->angle_ref) * 0.16666667f);
+    v->Ub = 0.5f * v->m_ref * (sinf(v->angle_ref - 2.0943952f) + sinf(3 * v->angle_ref) * 0.16666667f);
+    v->Uc = 0.5f * v->m_ref * (sinf(v->angle_ref + 2.0943952f) + sinf(3 * v->angle_ref) * 0.16666667f);
+}
 
 void calc_angle(SV_MODULE_handle v)
 {
-
 }

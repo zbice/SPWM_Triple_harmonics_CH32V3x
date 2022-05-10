@@ -24,15 +24,13 @@
 #include "EEMU_PWM.h"
 #include <math.h>
 
-
 u8 Led = 0;
 SV_MODULE Sv_module;
 u32 Tim1_int_count = 0;
-u16 Fre_m = 200; // µ÷ÖÆ²¨ÆµÂÊ
+u16 Fre_m = 200; // è°ƒåˆ¶æ³¢é¢‘çŽ‡
 
 void Interrupt_Init(void);
-void TIM1_CC_IRQHandler(void)   __attribute__((interrupt("WCH-Interrupt-fast")));
-
+void TIM1_UP_IRQHandler(void) __attribute__((interrupt("WCH-Interrupt-fast")));
 
 /*********************************************************************
  * @fn      main
@@ -43,73 +41,58 @@ void TIM1_CC_IRQHandler(void)   __attribute__((interrupt("WCH-Interrupt-fast")))
  */
 int main(void)
 {
-    sv_module_init(&Sv_module);
     svpwm_init(100, 5);
+    sv_module_init(&Sv_module, 100);
+    Sv_module.m_ref = 0.8f;
+    Fre_m = 200;
 
-    // ÉèÖÃLED
-    /*
+    // è®¾ç½®LED
     GPIO_InitTypeDef GPIO_InitStructure = {0};
-    RCC_APB2PeriphClockCmd(RCC_APB2Periph_GPIOA, ENABLE);
     GPIO_InitStructure.GPIO_Pin = GPIO_Pin_0;
     GPIO_InitStructure.GPIO_Mode = GPIO_Mode_Out_PP;
     GPIO_InitStructure.GPIO_Speed = GPIO_Speed_50MHz;
     GPIO_Init(GPIOA, &GPIO_InitStructure);
-    */
 
-    // Ê¹ÄÜÖÐ¶Ï
+    // ä½¿èƒ½ä¸­æ–­
     Tim1_int_count = 0;
+    Sv_module.angle_ref = (Tim1_int_count + 1) * TIM1_PERIOD * Fre_m * M_PI_2;
+    calc_SV_Uabc(&Sv_module);
+    sv_module_calc(&Sv_module, TIM1);
+
+    // ä½¿èƒ½ä¸­æ–­
     Interrupt_Init();
-
-    while(1)
+    while (1)
     {
-
     }
-
 }
-
 
 void Interrupt_Init(void)
 {
-    NVIC_EnableIRQ(TIM1_CC_IRQn);
-    // ×éÓÅÏÈ¼¶0£¬×ÓÓÅÏÈ¼¶1£¬×ÜÓÅÏÈ¼¶½Ï¸ß
-    NVIC_SetPriority(TIM1_CC_IRQn, (0<<5) | (0x01<<4));
+    NVIC_EnableIRQ(TIM1_UP_IRQn);
+    // ç»„ä¼˜å…ˆçº§0ï¼Œå­ä¼˜å…ˆçº§1ï¼Œæ€»ä¼˜å…ˆçº§è¾ƒé«˜
+    NVIC_SetPriority(TIM1_UP_IRQn, (0 << 5) | (0x01 << 4));
 }
 
-
-void TIM1_CC_IRQHandler(void)
+void TIM1_UP_IRQHandler(void)
 {
-    // Ê¹LEDÉÁË¸¡£·­×ªPA0Êä³ö¡£
-    // GPIO_WriteBit(GPIOA, GPIO_Pin_0, (Led == 0) ? (Led = Bit_SET) : (Led = Bit_RESET));
+    // è®¡æ•°å™¨æ›´æ–°äº‹ä»¶ä¸­æ–­
+    if (TIM_GetFlagStatus(TIM1, TIM_FLAG_Update) == SET)
+    {
+        // è®¡æ•°å™¨ä¸‹æº¢
+        if (TIM1->CNT == 0)
+        {
+            Tim1_int_count += 1;
+            // è®¡ç®—ä¸‹æ¬¡ä¸­æ–­çš„è§’åº¦
+            Sv_module.angle_ref = (Tim1_int_count + 1) * TIM1_PERIOD * Fre_m * M_PI_2;
+            if (Sv_module.angle_ref > M_PI_2)
+            {
+                Tim1_int_count = 1;
+            }
 
-    Tim1_int_count += 1;
-    // ¼ÆËã½Ç¶È
-    Sv_module->angle_ref = Tim1_int_count * TIM1->CNT * TIM1_PERIOD * Fre_m * M_PI_2;
-    if (Sv_module->angle_ref > M_PI_2)
-    {
-        Tim1_int_count = 1;
-    }
+            calc_SV_Uabc(&Sv_module);
+            sv_module_calc(&Sv_module, TIM1);
+        }
 
-    // CH1 AÏàÖÐ¶Ï
-    if (TIM_GetFlagStatus(TIM1, TIM_FLAG_CC1) == SET)
-    {
-        calc_SV_Ua(Sv_module);
-        TIM_ClearFlag(TIM1, TIM_FLAG_CC1);
+        TIM_ClearFlag(TIM1, TIM_FLAG_Update);
     }
-    if (TIM_GetFlagStatus(TIM1, TIM_FLAG_CC2) == SET)
-    {
-        calc_SV_Ub(Sv_module);
-        TIM_ClearFlag(TIM1, TIM_FLAG_CC2);
-    }
-    if (TIM_GetFlagStatus(TIM1, TIM_FLAG_CC3) == SET)
-    {
-        calc_SV_Uc(Sv_module);
-        TIM_ClearFlag(TIM1, TIM_FLAG_CC3);
-    }
-    if (TIM_GetFlagStatus(TIM1, TIM_FLAG_CC4) == SET)
-    {
-        TIM_ClearFlag(TIM1, TIM_FLAG_CC4);
-    }
-
-    sv_module_calc(&Sv_module, TIM1);
 }
-
