@@ -28,6 +28,7 @@ u8 Led = 0;
 SV_MODULE Sv_module;
 u32 Tim1_int_count = 0;
 u16 Fre_m = 200; // 调制波频率
+float Coefficient_angle = 0.000314159274f;
 
 void Interrupt_Init(void);
 void TIM1_UP_IRQHandler(void) __attribute__((interrupt("WCH-Interrupt-fast")));
@@ -41,23 +42,21 @@ void TIM1_UP_IRQHandler(void) __attribute__((interrupt("WCH-Interrupt-fast")));
  */
 int main(void)
 {
-    svpwm_init(100, 5);
-    sv_module_init(&Sv_module, 100);
+    // USART_Printf_Init(115200);
+    // printf("SystemClk:%d\r\n", SystemCoreClock);
+    svpwm_init(MAX_COUNT_TIM1, 5);
+    sv_module_init(&Sv_module);
     Sv_module.m_ref = 0.8f;
     Fre_m = 200;
-
-    // 设置LED
-    GPIO_InitTypeDef GPIO_InitStructure = {0};
-    GPIO_InitStructure.GPIO_Pin = GPIO_Pin_0;
-    GPIO_InitStructure.GPIO_Mode = GPIO_Mode_Out_PP;
-    GPIO_InitStructure.GPIO_Speed = GPIO_Speed_50MHz;
-    GPIO_Init(GPIOA, &GPIO_InitStructure);
+    Coefficient_angle = MAX_COUNT_TIM1 * PERIOD_TIM1 * PI_DOUBLE;
 
     // 使能中断
     Tim1_int_count = 0;
-    Sv_module.angle_ref = (Tim1_int_count + 1) * TIM1_PERIOD * Fre_m * M_PI_2;
+    Sv_module.angle_ref = (2 * Tim1_int_count + 1) * Coefficient_angle * Fre_m;
     calc_SV_Uabc(&Sv_module);
     sv_module_calc(&Sv_module, TIM1);
+    // u16 compare = get_compare(Tim1_int_count, MAX_COUNT_TIM1);
+    // TIM_SetCompare1(TIM1, compare);
 
     // 使能中断
     Interrupt_Init();
@@ -83,14 +82,16 @@ void TIM1_UP_IRQHandler(void)
         {
             Tim1_int_count += 1;
             // 计算下次中断的角度
-            Sv_module.angle_ref = (Tim1_int_count + 1) * TIM1_PERIOD * Fre_m * M_PI_2;
-            if (Sv_module.angle_ref > M_PI_2)
+            Sv_module.angle_ref = (2 * Tim1_int_count + 1) * Coefficient_angle * Fre_m;
+            if (Sv_module.angle_ref > PI_DOUBLE)
             {
+                Sv_module.angle_ref = Coefficient_angle * Fre_m;
                 Tim1_int_count = 1;
             }
-
             calc_SV_Uabc(&Sv_module);
             sv_module_calc(&Sv_module, TIM1);
+            // u16 compare = get_compare(Tim1_int_count, MAX_COUNT_TIM1);
+            // TIM_SetCompare1(TIM1, compare);
         }
 
         TIM_ClearFlag(TIM1, TIM_FLAG_Update);

@@ -19,9 +19,9 @@ u16 flag_outa_3 = 0, flag_into_3 = 0; //比较寄存器标志位
 
 u16 CMPA_TEMP1, CMPA_TEMP2, CMPA_TEMP3, CMPA_TEMP4;
 
-void svpwm_init(u16 sw_fre, u16 dead_time);
+void svpwm_init(u16 arr, u16 dead_time);
 void sv_module_calc(SV_MODULE_handle v, TIM_TypeDef *TIMx);
-void sv_module_init(SV_MODULE_handle v, u16 sw_fre);
+void sv_module_init(SV_MODULE_handle v);
 void update_compare(TIM_TypeDef *TIMx);
 void calc_SV_Uabc(SV_MODULE_handle v);
 
@@ -32,20 +32,19 @@ void calc_SV_Uabc(SV_MODULE_handle v);
  *          初始化TIM1的4路PWM
  *          第4路只有1个信号，其他三路各有1对。
  *
- * @param   sw_fre - sw_fre = 定时器时钟频率 / 开关频率
+ * @param   arr - sw_fre = 定时器时钟频率 / 开关频率 / 2,中央对齐时开关频率是定时器频率的2倍
  *          dead_time - dead_time = 实际死区时间 * 144e6 / k - m,
  *          k = 16, 实际时区时间可选4~7us，其他k值需要修改函数第120行。
  * @return  none
  */
-void svpwm_init(u16 sw_fre, u16 dead_time)
+void svpwm_init(u16 arr, u16 dead_time)
 {
     u16 psc = 144 - 1;
-    if (TIM1_PERIOD == 1e-6)
+    if (PERIOD_TIM1 == 1e-6)
     {
         psc = 144 - 1; // 计数器时钟分频，使计数器时钟为1us
     }
-    u16 arr = sw_fre >> 1; // 中央对齐时开关频率是定时器频率的2倍
-    u16 ccp = sw_fre >> 2; // 初始占空比设为50%
+    u16 ccp = arr >> 1; // 初始占空比设为50%
     // 0xE0 => k = 16, m = 32; 0xC0 => k = 8, m = 32;
     // 0x80 => k = 2, m = 64; 0x00 => k = 1, m = 0;
     u16 k_mask = 0xE0;
@@ -437,15 +436,15 @@ void update_compare(TIM_TypeDef *TIMx)
     CMPA_TEMP4 = TIMx->CH4CVR;
 }
 
-void sv_module_init(SV_MODULE_handle v, u16 sw_fre)
+void sv_module_init(SV_MODULE_handle v)
 {
     v->m_ref = 0;
     v->angle_ref = 0;
     v->Ua = 0;
     v->Ub = 0;
     v->Uc = 0;
-    v->Fc = 1e6 / sw_fre;
-    v->Ts = (sw_fre >> 1);
+    v->Fc = FRE_TIM1;
+    v->Ts = MAX_COUNT_TIM1;
     v->deltak = 0;
     v->DELTAKCONST = 0;
     v->vdc = 0;
@@ -475,6 +474,3 @@ void calc_SV_Uabc(SV_MODULE_handle v)
     v->Uc = 0.5f * v->m_ref * (sinf(v->angle_ref + 2.0943952f) + sinf(3 * v->angle_ref) * 0.16666667f);
 }
 
-void calc_angle(SV_MODULE_handle v)
-{
-}

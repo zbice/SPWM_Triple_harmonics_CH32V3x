@@ -30,6 +30,8 @@ void Delay_Us (uint32_t n);
 void Delay_Ms (uint32_t n);
 void USART_Printf_Init(uint32_t baudrate);
 
+u16 get_compare(u32 tick, u16 sw_fre);
+
 #endif 
 
 

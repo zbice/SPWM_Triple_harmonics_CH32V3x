@@ -1,7 +1,11 @@
 #ifndef _EEMU_PWM_H_
 #define _EEMU_PWM_H_
 
-#define TIM1_PERIOD 1e-6f
+#define FRE_SWITCH 10000
+#define PERIOD_TIM1 1e-6f
+#define FRE_TIM1 1000000
+#define MAX_COUNT_TIM1 50
+#define PI_DOUBLE 6.28318548f
 
 /********************SPWM����*********************/
 typedef struct
@@ -38,9 +42,15 @@ typedef struct
 
 typedef SV_MODULE *SV_MODULE_handle;
 
-void svpwm_init(u16 sw_fre, u16 dead_time);
+void svpwm_init(u16 arr, u16 dead_time);
 void sv_module_calc(SV_MODULE_handle v, TIM_TypeDef *TIMx);
-void sv_module_init(SV_MODULE_handle v, u16 sw_fre);
+void sv_module_init(SV_MODULE_handle v);
 void calc_SV_Uabc(SV_MODULE_handle v);
+
+inline float calc_angle(u16 count_carry, u16 arr, u16 T_m)
+{
+    float angle = ((2 * count_carry + 1) * arr * PERIOD_TIM1) / T_m * PI_DOUBLE;
+    return angle;
+}
 
 #endif

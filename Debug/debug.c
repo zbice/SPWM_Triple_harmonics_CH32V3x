@@ -190,4 +190,32 @@ void *_sbrk(ptrdiff_t incr)
 }
 
 
+u16 get_compare(u32 tick, u16 sw_fre)
+{
+    u16 compare;
+    if (tick % 2 == 0)
+    {
+        compare = sw_fre >> 1;
+    }
+    else
+    {
+        compare = sw_fre >> 2;
+    }
+    return compare;
+}
 
+
+// 检查角度计算是否正确
+//float angle[100];
+//u16 i = 0;
+//for (Tim1_int_count=0; Tim1_int_count<100; Tim1_int_count+=1)
+//{
+//    angle[Tim1_int_count] = ((2 * i + 1) * MAX_COUNT_TIM1 * PERIOD_TIM1) * Fre_m * PI_DOUBLE;
+//    i += 1;
+//    if (angle[Tim1_int_count] > PI_DOUBLE)
+//    {
+//        angle[Tim1_int_count] = (MAX_COUNT_TIM1 * PERIOD_TIM1) * Fre_m * PI_DOUBLE;
+//        i = 1;
+//    }
+//    printf(&angle[Tim1_int_count]);
+//}
