@@ -44,6 +44,14 @@ int main(void)
 {
     // USART_Printf_Init(115200);
     // printf("SystemClk:%d\r\n", SystemCoreClock);
+
+    // GPIO_InitTypeDef GPIO_InitStructure = {0};
+    // RCC_APB2PeriphClockCmd(RCC_APB2Periph_GPIOE, ENABLE);
+    // GPIO_InitStructure.GPIO_Pin = GPIO_Pin_2;
+    // GPIO_InitStructure.GPIO_Mode = GPIO_Mode_Out_PP;
+    // GPIO_InitStructure.GPIO_Speed = GPIO_Speed_50MHz;
+    // GPIO_Init(GPIOE, &GPIO_InitStructure);
+
     svpwm_init(MAX_COUNT_TIM1, 5);
     sv_module_init(&Sv_module);
     Sv_module.m_ref = 0.8f;
@@ -71,15 +79,20 @@ void Interrupt_Init(void)
     // 组优先级0，子优先级1，总优先级较高
     NVIC_SetPriority(TIM1_UP_IRQn, (0 << 5) | (0x01 << 4));
 }
-
+u8 i = 0;
+u16 cnt=0;
 void TIM1_UP_IRQHandler(void)
 {
     // 计数器更新事件中断
     if (TIM_GetFlagStatus(TIM1, TIM_FLAG_Update) == SET)
     {
+        TIM_ClearFlag(TIM1, TIM_FLAG_Update);
+
         // 计数器下溢
-        if (TIM1->CNT == 0)
+        if (Is_tim_count_up == 0)
         {
+            Is_tim_count_up = 1;
+
             Tim1_int_count += 1;
             // 计算下次中断的角度
             Sv_module.angle_ref = (2 * Tim1_int_count + 1) * Coefficient_angle * Fre_m;
@@ -90,10 +103,17 @@ void TIM1_UP_IRQHandler(void)
             }
             calc_SV_Uabc(&Sv_module);
             sv_module_calc(&Sv_module, TIM1);
-            // u16 compare = get_compare(Tim1_int_count, MAX_COUNT_TIM1);
-            // TIM_SetCompare1(TIM1, compare);
+
+            // GPIO_WriteBit(GPIOE, GPIO_Pin_2, 0);
+        }
+        else if (Is_tim_count_up == 1)
+        {
+            Is_tim_count_up = 0;
+
+            // GPIO_WriteBit(GPIOE, GPIO_Pin_2, 1);
         }
 
-        TIM_ClearFlag(TIM1, TIM_FLAG_Update);
+
+
     }
 }

@@ -20,14 +20,6 @@
   0xE0 => k = 16, m = 32; 0xC0 => k = 8, m = 32;
   0x80 => k = 2, m = 64;   0x00 => k = 1, m = 0;
 
-
-
-`void TIM1_PWMOut_Init_debug(u16 arr, u16 psc, u16 ccp)`
-
-调试用，测试PWM周期。
-
-
-
 `void sv_module_calc(SV_MODULE_handle v, TIM_TypeDef *TIMx)`
 
 实现SVPWM，计算定时器中的比较器时间。

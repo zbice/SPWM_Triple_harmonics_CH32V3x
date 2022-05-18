@@ -19,6 +19,8 @@ u16 flag_outa_3 = 0, flag_into_3 = 0; //比较寄存器标志位
 
 u16 CMPA_TEMP1, CMPA_TEMP2, CMPA_TEMP3, CMPA_TEMP4;
 
+u8 Is_tim_count_up;
+
 void svpwm_init(u16 arr, u16 dead_time);
 void sv_module_calc(SV_MODULE_handle v, TIM_TypeDef *TIMx);
 void sv_module_init(SV_MODULE_handle v);
@@ -39,6 +41,8 @@ void calc_SV_Uabc(SV_MODULE_handle v);
  */
 void svpwm_init(u16 arr, u16 dead_time)
 {
+    Is_tim_count_up = 1;
+
     u16 psc = 144 - 1;
     if (PERIOD_TIM1 == 1e-6)
     {
@@ -112,8 +116,8 @@ void svpwm_init(u16 arr, u16 dead_time)
     TIM_OCInitStructure.TIM_OutputState = TIM_OutputState_Enable;
     TIM_OCInitStructure.TIM_OutputNState = TIM_OutputNState_Enable;
     TIM_OCInitStructure.TIM_Pulse = ccp;
-    TIM_OCInitStructure.TIM_OCPolarity = TIM_OCPolarity_Low;
-    TIM_OCInitStructure.TIM_OCNPolarity = TIM_OCNPolarity_Low;
+    TIM_OCInitStructure.TIM_OCPolarity = TIM_OCPolarity_High;
+    TIM_OCInitStructure.TIM_OCNPolarity = TIM_OCPolarity_High;
     TIM_OCInitStructure.TIM_OCIdleState = TIM_OCIdleState_Reset;
     TIM_OCInitStructure.TIM_OCNIdleState = TIM_OCNIdleState_Reset;
     TIM_OC1Init(TIM1, &TIM_OCInitStructure);
@@ -123,8 +127,8 @@ void svpwm_init(u16 arr, u16 dead_time)
     TIM_OCInitStructure.TIM_OutputState = TIM_OutputState_Enable;
     TIM_OCInitStructure.TIM_OutputNState = TIM_OutputNState_Enable;
     TIM_OCInitStructure.TIM_Pulse = ccp;
-    TIM_OCInitStructure.TIM_OCPolarity = TIM_OCPolarity_Low;
-    TIM_OCInitStructure.TIM_OCNPolarity = TIM_OCNPolarity_Low;
+    TIM_OCInitStructure.TIM_OCPolarity = TIM_OCPolarity_High;
+    TIM_OCInitStructure.TIM_OCNPolarity = TIM_OCPolarity_High;
     TIM_OCInitStructure.TIM_OCIdleState = TIM_OCIdleState_Reset;
     TIM_OCInitStructure.TIM_OCNIdleState = TIM_OCNIdleState_Reset;
     TIM_OC2Init(TIM1, &TIM_OCInitStructure);
@@ -134,8 +138,8 @@ void svpwm_init(u16 arr, u16 dead_time)
     TIM_OCInitStructure.TIM_OutputState = TIM_OutputState_Enable;
     TIM_OCInitStructure.TIM_OutputNState = TIM_OutputNState_Enable;
     TIM_OCInitStructure.TIM_Pulse = ccp;
-    TIM_OCInitStructure.TIM_OCPolarity = TIM_OCPolarity_Low;
-    TIM_OCInitStructure.TIM_OCNPolarity = TIM_OCNPolarity_Low;
+    TIM_OCInitStructure.TIM_OCPolarity = TIM_OCPolarity_High;
+    TIM_OCInitStructure.TIM_OCNPolarity = TIM_OCPolarity_High;
     TIM_OCInitStructure.TIM_OCIdleState = TIM_OCIdleState_Reset;
     TIM_OCInitStructure.TIM_OCNIdleState = TIM_OCNIdleState_Reset;
     TIM_OC3Init(TIM1, &TIM_OCInitStructure);

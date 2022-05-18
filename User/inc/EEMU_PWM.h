@@ -42,6 +42,8 @@ typedef struct
 
 typedef SV_MODULE *SV_MODULE_handle;
 
+extern u8 Is_tim_count_up;
+
 void svpwm_init(u16 arr, u16 dead_time);
 void sv_module_calc(SV_MODULE_handle v, TIM_TypeDef *TIMx);
 void sv_module_init(SV_MODULE_handle v);
